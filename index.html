@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de Ropa y Productos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Librería para generar Excel en el navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Gestión de Ropa y Productos</h1>
+    <p>Registra tus prendas, guárdalas y descárgalas en Excel</p>
+  </header>
+
+  <main class="app-container">
+    <section class="card form-card">
+      <h2>Nueva prenda / producto</h2>
+      <form id="product-form">
+        <div class="form-grid">
+          <div class="field">
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" required placeholder="Ej: Camisa básica" />
+          </div>
+          <div class="field">
+            <label for="categoria">Categoría</label>
+            <input
+              type="text"
+              id="categoria"
+              list="lista-categorias"
+              placeholder="Selecciona o escribe una categoría"
+            />
+            <datalist id="lista-categorias">
+              <option value="Lencería"></option>
+              <option value="Pantalón"></option>
+              <option value="Camisas"></option>
+              <option value="Chombas"></option>
+              <option value="Boxer"></option>
+              <option value="Accesorios"></option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="talla">Talla</label>
+            <input type="text" id="talla" placeholder="Ej: S, M, L, 38, 40" />
+          </div>
+          <div class="field">
+            <label for="color">Color</label>
+            <input type="text" id="color" placeholder="Ej: Negro, Blanco, Rojo" />
+          </div>
+          <div class="field">
+            <label for="precio">Precio</label>
+            <input type="number" id="precio" min="0" step="0.01" placeholder="Ej: 19990" />
+          </div>
+          <div class="field">
+            <label for="stock">Stock</label>
+            <input type="number" id="stock" min="0" step="1" placeholder="Ej: 20" />
+          </div>
+          <div class="field field-full">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" rows="2" placeholder="Detalles, tela, marca, etc."></textarea>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Agregar a la lista</button>
+          <button type="reset" class="btn btn-secondary">Limpiar formulario</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-header">
+        <h2>Listado de productos</h2>
+        <div class="table-actions">
+          <button id="btn-export" class="btn btn-accent" disabled>Descargar Excel</button>
+          <button id="btn-clear" class="btn btn-outline" disabled>Vaciar lista</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Talla</th>
+              <th>Color</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Descripción</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody">
+            <!-- Filas generadas por JavaScript -->
+          </tbody>
+        </table>
+      </div>
+      <p id="empty-message" class="empty-message">Aún no has agregado productos.</p>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Sistema de actualización de productos</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
