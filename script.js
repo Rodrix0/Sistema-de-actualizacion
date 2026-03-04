@@ -30,6 +30,7 @@ function renderTabla() {
       <td>${p.categoria || "-"}</td>
       <td>${p.talla || "-"}</td>
       <td>${p.color || "-"}</td>
+      <td>${p.fotoNombre || "-"}</td>
       <td>${p.precio ?? "-"}</td>
       <td>${p.stock ?? "-"}</td>
       <td>${p.descripcion || "-"}</td>
@@ -59,6 +60,7 @@ function obtenerDatosFormulario() {
   const categoria = document.getElementById("categoria").value.trim();
   const talla = document.getElementById("talla").value.trim();
   const color = document.getElementById("color").value.trim();
+  const inputFoto = document.getElementById("foto");
   const precioValor = document.getElementById("precio").value;
   const stockValor = document.getElementById("stock").value;
   const descripcion = document.getElementById("descripcion").value.trim();
@@ -70,12 +72,15 @@ function obtenerDatosFormulario() {
 
   const precio = precioValor !== "" ? Number(precioValor) : null;
   const stock = stockValor !== "" ? Number(stockValor) : null;
+  const archivoFoto = inputFoto && inputFoto.files && inputFoto.files[0] ? inputFoto.files[0] : null;
+  const fotoNombre = archivoFoto ? archivoFoto.name : "";
 
   return {
     nombre,
     categoria,
     talla,
     color,
+    fotoNombre,
     precio,
     stock,
     descripcion,
@@ -107,22 +112,44 @@ btnClear.addEventListener("click", () => {
 btnExport.addEventListener("click", () => {
   if (!productos.length) return;
 
-  // Creamos una copia formateada para el Excel, con encabezados más amigables
-  const datosExcel = productos.map((p, idx) => ({
-    Nº: idx + 1,
-    Nombre: p.nombre,
-    Categoría: p.categoria,
-    Talla: p.talla,
-    Color: p.color,
-    Precio: p.precio,
-    Stock: p.stock,
-    Descripción: p.descripcion,
-  }));
-
   try {
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(datosExcel);
-    XLSX.utils.book_append_sheet(wb, ws, "Productos");
+
+    // Agrupar por categoría para crear una hoja por cada una
+    const gruposPorCategoria = new Map();
+
+    productos.forEach((p, idx) => {
+      const categoria = p.categoria && p.categoria.trim() ? p.categoria.trim() : "Sin categoría";
+      if (!gruposPorCategoria.has(categoria)) {
+        gruposPorCategoria.set(categoria, []);
+      }
+      gruposPorCategoria.get(categoria).push({
+        Nº: idx + 1,
+        Nombre: p.nombre,
+        Categoría: p.categoria,
+        Talla: p.talla,
+        Color: p.color,
+        "Foto (nombre archivo)": p.fotoNombre || "",
+        Precio: p.precio,
+        Stock: p.stock,
+        Descripción: p.descripcion,
+      });
+    });
+
+    // Crear una hoja por categoría
+    gruposPorCategoria.forEach((filas, categoria) => {
+      const ws = XLSX.utils.json_to_sheet(filas);
+
+      // Limpiar el nombre de la hoja (Excel no permite algunos caracteres y máximo 31)
+      let nombreHoja = categoria.replace(/[:\\/?*\[\]]/g, " ");
+      if (!nombreHoja.trim()) nombreHoja = "Productos";
+      if (nombreHoja.length > 31) {
+        nombreHoja = nombreHoja.substring(0, 31);
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+    });
+
     XLSX.writeFile(wb, "productos_ropa.xlsx");
   } catch (error) {
     console.error("Error al generar el Excel:", error);
