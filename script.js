@@ -115,42 +115,81 @@ btnExport.addEventListener("click", () => {
   try {
     const wb = XLSX.utils.book_new();
 
-    // Agrupar por categoría para crear una hoja por cada una
-    const gruposPorCategoria = new Map();
+    // Función auxiliar para procesar y formatear una hoja
+    const crearHoja = (datosFiltrados, nombreHojaBase) => {
+      // 1. Preparar los datos con nombres de columna amigables
+      const filas = datosFiltrados.map((p, idx) => ({
+        "Nº": idx + 1,
+        "Nombre": p.nombre,
+        "Categoría": p.categoria || "Sin categoría",
+        "Talla": p.talla || "-",
+        "Color": p.color || "-",
+        "Foto": p.fotoNombre || "-",
+        "Precio": p.precio || 0,
+        "Stock": p.stock || 0,
+        "Descripción": p.descripcion || "-",
+      }));
 
-    productos.forEach((p, idx) => {
-      const categoria = p.categoria && p.categoria.trim() ? p.categoria.trim() : "Sin categoría";
-      if (!gruposPorCategoria.has(categoria)) {
-        gruposPorCategoria.set(categoria, []);
-      }
-      gruposPorCategoria.get(categoria).push({
-        Nº: idx + 1,
-        Nombre: p.nombre,
-        Categoría: p.categoria,
-        Talla: p.talla,
-        Color: p.color,
-        "Foto (nombre archivo)": p.fotoNombre || "",
-        Precio: p.precio,
-        Stock: p.stock,
-        Descripción: p.descripcion,
-      });
-    });
-
-    // Crear una hoja por categoría
-    gruposPorCategoria.forEach((filas, categoria) => {
+      // 2. Crear la hoja
       const ws = XLSX.utils.json_to_sheet(filas);
 
-      // Limpiar el nombre de la hoja (Excel no permite algunos caracteres y máximo 31)
-      let nombreHoja = categoria.replace(/[:\\/?*\[\]]/g, " ");
-      if (!nombreHoja.trim()) nombreHoja = "Productos";
-      if (nombreHoja.length > 31) {
-        nombreHoja = nombreHoja.substring(0, 31);
+      // 3. Calcular totales
+      const totalPrecio = datosFiltrados.reduce((sum, p) => sum + (p.precio || 0), 0);
+      const totalStock = datosFiltrados.reduce((sum, p) => sum + (p.stock || 0), 0);
+
+      // 4. Añadir fila de totales al final
+      const ultimaFila = filas.length + 1;
+      const filaTotales = [
+        ["", "", "", "", "TOTALES", "", totalPrecio, totalStock, ""]
+      ];
+      XLSX.utils.sheet_add_aoa(ws, filaTotales, { origin: `A${ultimaFila + 1}` });
+
+      // 5. Configurar formatos (Moneda para Precio en columna G)
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = 1; R <= range.e.r; ++R) {
+        const cellPrecio = ws[XLSX.utils.encode_cell({ r: R, c: 6 })]; // Columna G (index 6)
+        if (cellPrecio && typeof cellPrecio.v === 'number') {
+          cellPrecio.z = '"$"#,##0.00'; // Formato de moneda
+        }
       }
 
+      // 6. Configurar anchos de columna (ajuste manual aproximado)
+      ws['!cols'] = [
+        { wch: 5 },  // Nº
+        { wch: 25 }, // Nombre
+        { wch: 15 }, // Categoría
+        { wch: 10 }, // Talla
+        { wch: 12 }, // Color
+        { wch: 20 }, // Foto
+        { wch: 12 }, // Precio
+        { wch: 10 }, // Stock
+        { wch: 30 }, // Descripción
+      ];
+
+      // 7. Limpiar y validar nombre de hoja
+      let nombreHoja = nombreHojaBase.replace(/[:\\/?*\[\]]/g, " ");
+      if (!nombreHoja.trim()) nombreHoja = "Hoja";
+      nombreHoja = nombreHoja.substring(0, 31);
+
       XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+    };
+
+    // --- Generar Hoja General ---
+    crearHoja(productos, "General");
+
+    // --- Generar Hojas por Categoría ---
+    const categorias = [...new Set(productos.map(p => p.categoria && p.categoria.trim() ? p.categoria.trim() : "Sin categoría"))];
+    
+    // Si solo hay una categoría, no es necesario duplicar (opcional, pero mejor ser explícito)
+    categorias.forEach(cat => {
+      const productosCat = productos.filter(p => (p.categoria?.trim() || "Sin categoría") === cat);
+      crearHoja(productosCat, cat);
     });
 
-    XLSX.writeFile(wb, "productos_ropa.xlsx");
+    // Guardar archivo
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Inventario_Productos_${fecha}.xlsx`);
+
   } catch (error) {
     console.error("Error al generar el Excel:", error);
     alert("Ocurrió un error al generar el archivo Excel.");
